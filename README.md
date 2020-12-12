@@ -4,9 +4,9 @@ OK this is:
 1. An interactive data browser meant for exploring your data that you are already familiar with.
 2. Not as nice as other interactive data browsers
 3. But has some neat features
-  a. quick cross-hovering, so that when one point is hovered, all marks corresponding to that row highlight
-  b. you can have a column that refers to an img url/path, so when you hover over a point you can see that picture (often a graph of underlying data)
-  c. (haven't got this done yet) you can have a column that refers to another datafile, so you can click on a point and then go explore the underlying data
+  * quick cross-hovering, so that when one point is hovered, all marks corresponding to that row highlight
+  * you can have a column that refers to an img url/path, so when you hover over a point you can see that picture (often a graph of underlying data)
+  * (haven't got this done yet) you can have a column that refers to another datafile, so you can click on a point and then go explore the underlying data
   
 ## HOW TO (THIS IS ANNOYING, THE GOAL WILL BE TO EVENTUALLY MAKE THIS EASIER):
 
