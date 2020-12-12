@@ -10,7 +10,7 @@ OK this is:
   
 ## HOW TO (THIS IS ANNOYING, THE GOAL WILL BE TO EVENTUALLY MAKE THIS EASIER):
 
-1. Clone this repo (or just download the three files) and put them in the directory your data is in.
+1. Clone this repo (or just download the three files) and put them in the directory your data is in. You can also test it out online here - https://nifty-poincare-4f73e1.netlify.app/wowohwowtable - but then you won't be able to access local image files.
 2. Open WOWOhWowTable.html
 3. Open a tab-separated table (supporting comma-separated is to-do)
 4. The 4 icons on the right represent different elements you can add, from top to bottom: text, image, marker plot, series plot. To use one, click on it, and then click and drag to make a rectangle where that element will live.
