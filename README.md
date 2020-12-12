@@ -2,7 +2,7 @@
 
 OK this is:
 1. An interactive data browser meant for exploring your data that you are already familiar with.
-2. Not as nice as other interactive data browsers
+2. Not as nice as other interactive data browsers, and WILL BE VERY SLOW ON BIG DATASETS STICK TO SMALL ONES FOR NOW
 3. But has some neat features
   * quick cross-hovering, so that when one point is hovered, all marks corresponding to that row highlight
   * you can have a column that refers to an img url/path, so when you hover over a point you can see that picture (often a graph of underlying data)
