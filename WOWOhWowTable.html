@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="https://fonts.googleapis.com/css?family=Crimson+Text&display=swap" rel="stylesheet" type="text/css">
+
+  <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="stylesheet" href="WOWOhWowTable.css">
+
+  <!-- JS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="WOWOhWowTable.js"></script>
+
+</head>
+<body>
+  <div id="WOW_everything">
+    <div id="WOW_topbar">
+      <label for="file_input" class="WOW_button">Load Table</label>
+      <input type='file' id='file_input' class="WOW_button_hidden" oninput='WOW.file_reader()'>
+      <!--<label for="view_input" class="WOW_button">Load View</label>
+      <input type='file' id='view_input' class="WOW_button_hidden" oninput='WOW_view_reader()'>
+      <button id='view_output' class="WOW_button" onclick='WOW_save_view()'>Save View</button>-->
+    </div>
+    <div id="WOW_sidebar">
+      <div id="WOW_sidebar_closer" onclick="WOW.toggle_sidebar()">&lt</div>
+    </div>
+    <div id="WOW_svg_holder"></div>
+  </div>
+</body>
+</html>
