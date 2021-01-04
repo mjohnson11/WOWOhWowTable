@@ -24,6 +24,13 @@ WOW.toggle = function(element) {
   element.style('display', (element.style('display')=='block') ?  "none" : "block");
 }
 
+WOW.class_toggle = function(element, tmp_class) {
+  // input is d3 element
+  let on_now = !element.classed(tmp_class)
+  element.classed(tmp_class, on_now);
+  return on_now;
+}
+
 // FOR DEBUGGING AND UNDERSTANDING INHERITANCE
 class Test {
   constructor(a) {
@@ -561,6 +568,8 @@ class WowData {
     this.f_in = f_in;
     this.wow_children = [];
     this.vis_elements = [];
+    this.tooltip_columns = [];
+    this.tooltip_on = true;
     let wow_data = this;
     console.log(f_in);
     let reader = new FileReader();
@@ -569,6 +578,13 @@ class WowData {
       wow_data.data = d3.tsvParse(reader.result)
       console.log(wow_data.data);
       wow_data.infer_dtypes();
+
+      //Making tooltip box
+      wow_data.tooltip = d3.select("#WOW_svg_holder").append('div')
+        .attr('class', 'WOW_tooltip')
+        .attr('id', wow_data.wow_data_class+"_tooltip")
+        .style('width', 200)
+        .html("<h2>yeah</h2><p>uhhuh</p>");
       
       // For draggin, I am going to make an overlay svg that only pops up when you're making rects:
       wow_data.drag_svg = d3.select("#WOW_svg_holder").append('svg')
@@ -592,7 +608,15 @@ class WowData {
         .enter()
         .append('g')
           .attr('class', 'WOW_data_group ' + wow_data.wow_data_class)
-          .on('mouseover', function(d) { d3.select(this).raise(); }) //brings to front
+          .on('mouseover', function(event, d) { 
+            d3.select(this).raise(); //brings to front
+            if (wow_data.tooltip_on) {
+              wow_data.tooltip.style('display', 'block');
+              wow_data.tooltip.html(wow_data.construct_tooltip(d));
+              wow_data.tooltip.style("left", (event.pageX+3) + "px").style("top", (event.pageY-3) + "px");
+            }
+          }) 
+          .on("mouseout", function() { wow_data.tooltip.style('display', 'none'); })
           .on('click', function() {
             let already_clicked = d3.select(this).classed('clicked_data');
             wow_data.svg.selectAll('.'+wow_data.wow_data_class).classed('clicked_data', false);
@@ -700,6 +724,8 @@ class WowData {
           .on('end', wow_data.endRect.bind(wow_data))
       );
   
+
+
     }
   }
 
@@ -900,7 +926,16 @@ class WowData {
     this.make_column_list();
   }
 
+  construct_tooltip(d) {
+    let html_tmp = "";
+    for (let column_name of this.tooltip_columns) {
+      html_tmp += "<h2>"+column_name+"</h2><p>"+d[column_name]+"</p>";
+    }
+    return html_tmp
+  }
+
   make_column_list() {
+    let self = this;
     let sidebar_container;
     if (!this.parent_column_div) {
       sidebar_container = d3.select("#WOW_sidebar");
@@ -913,24 +948,37 @@ class WowData {
     column_top_stuff.append('div').attr("class", "columns_label").html("Columns");
     let inner_column_div = column_div.append('div').attr("class", "inner_column_div");
     this.inner_column_labels = {};
-    let data_obj = this;
-    for (let column_name in data_obj.dtypes) {
-      let outer_single_column_label = inner_column_div.append('div').attr("class", "outer_single_column_label");
-      data_obj.inner_column_labels[column_name] = outer_single_column_label.append('div')
-        .attr("class", "inner_single_column_label column_label_"+data_obj.dtypes[column_name])
-        .html(column_name+" ("+data_obj.dtypes[column_name]+")")
-        .on("click", function() { data_obj.column_activate(column_name); });
+    this.outer_column_labels = {};
+    this.tooltip_labels = {};
+    for (let column_name in self.dtypes) {
+      self.outer_column_labels[column_name] = inner_column_div.append('div').attr("class", "outer_single_column_label");
+      self.inner_column_labels[column_name] = self.outer_column_labels[column_name].append('div')
+        .attr("class", "inner_single_column_label column_label_"+self.dtypes[column_name])
+        .attr("title", column_name)
+        .html(column_name)
+        .on("click", function() { self.column_activate(column_name); });
+      self.outer_column_labels[column_name].append('div')
+        .attr("class", "dtype_label dtype_label_"+self.dtypes[column_name])
+        .html(self.dtypes[column_name]);
+      self.tooltip_labels[column_name] = self.outer_column_labels[column_name].append('div')
+        .attr("class", "tooltip_label")
+        .html('TT')
+        .on('click', function() { 
+          let newly_on = WOW.class_toggle(d3.select(this), "tooltip_label_on");
+          if (newly_on) {
+            self.tooltip_columns.push(column_name);
+          } else {
+            self.tooltip_columns.splice(self.tooltip_columns.indexOf(column_name), 1);
+          }
+        });
+        
     }
   }
 
   column_activate(column_name) {
     this.active_column = column_name;
     for (let cname in this.inner_column_labels) {
-      if (cname == column_name) {
-        this.inner_column_labels[cname].attr("class", "inner_single_column_label label_highlighted column_label_"+this.dtypes[cname]);
-      } else {
-        this.inner_column_labels[cname].attr("class", "inner_single_column_label column_label_"+this.dtypes[cname]);
-      }
+      this.inner_column_labels[cname].classed("label_highlighted", cname == column_name);
     }
   }
 }
@@ -953,14 +1001,14 @@ WOW.toggle_sidebar = function() {
       .duration(300)
       .style("width", "13px")
       .style("overflow-x", "hidden")
-      .on("end", d3.select("#WOW_sidebar_closer").html('&gt;'))
+      .on("end", function() { d3.select("#WOW_sidebar_closer").html('&gt;'); })
   } else {
     d3.select("#WOW_sidebar")
       .transition()
       .duration(300)
-      .style("width", "200px")
+      .style("width", "260px")
       .style("overflow-x", "scroll")
-      .on("end", d3.select("#WOW_sidebar_closer").html('&lt;'))
+      .on("end", function() { d3.select("#WOW_sidebar_closer").html('&lt;'); })
   } 
 }
 
