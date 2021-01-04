@@ -217,6 +217,10 @@ input[type="file"] {
   opacity: 0.5;
 }
 
+.legend_div {
+  background-color: aqua;
+}
+
 /*#endregion*/
 
 /*#region*/ /* Styling DATA */

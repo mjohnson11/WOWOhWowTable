@@ -1,3 +1,5 @@
+
+// Global variables / defaults
 var WOW = {
   nan_formats: ['', 'nan', 'NaN', 'NA', 'inf', '-inf'],
   fraction_plot_marked: 0.2,
@@ -7,21 +9,27 @@ var WOW = {
   w: 1200,
   h: 800,
   default_color: "#555555",
-  color_wheel: ["#0173b2","#de8f05","#029e73","#d55e00","#cc78bc","#ca9161"]
+  color_wheel: ["#0173b2","#de8f05","#029e73","#d55e00","#cc78bc","#ca9161","#ece133","#56b4e9"]
 }
 
+// A few helper functions
 WOW.is_that_a_number = function(stringy_thing) {
   // guesses if a string is a number
   // from Angular code here: https://stackoverflow.com/questions/18082/validate-decimal-numbers-in-javascript-isnumeric
   return !isNaN(stringy_thing - parseFloat(stringy_thing));
 }
 
+WOW.toggle = function(element) {
+  // input is d3 element
+  element.style('display', (element.style('display')=='block') ?  "none" : "block");
+}
+
+// FOR DEBUGGING AND UNDERSTANDING INHERITANCE
 class Test {
   constructor(a) {
     this.a = a;
     this.fun();
   }
-
 }
 
 class Tester extends Test {
@@ -85,13 +93,20 @@ class WowText extends WowThing {
   add_content() {
     let self = this;
     this.content_var = this.parent_data.active_column;
+    /* Old font-size inference
     this.average_chars = 0;
+    let c = 0
     for (let possible_val of this.parent_data.string_sets[this.content_var]) {
-      this.average_chars += possible_val.length;
+      if (WOW.nan_formats.indexOf(String(possible_val))==-1) {
+        this.average_chars += String(possible_val).length;
+        c += 1;
+      }
     }
-    this.average_chars = this.average_chars / this.parent_data.string_sets[this.content_var].length;
+    this.average_chars = this.average_chars / c;
     this.font_size = Math.sqrt(this.w*this.h)/this.average_chars;
-    console.log(this.font_size);
+    */
+    this.font_size = 16;
+    console.log(this.content_var, this.average_chars, this.font_size);
     // Everything will just be displayed as strings
     this.parent_data.svg.selectAll('.' + self.parent_data.wow_data_class)
       .append('foreignObject')
@@ -167,6 +182,7 @@ class WowGraph extends WowThing {
     let self = this;
     this.axes = this.graph_stuff.append('g');
     this.plotted_yet = false;
+    this.has_color = false;
 
     this.xlabel = this.graph_stuff.append('text')
       .html('X')
@@ -184,8 +200,107 @@ class WowGraph extends WowThing {
       .attr('y', this.top-15)
       .on('click', function() { self.label_y(); });
 
+    this.color_by = this.graph_stuff.append('image')
+      .attr('class', 'plot_option plot_color')
+      .attr('x', this.left+this.w-15)
+      .attr('y', this.top)
+      .attr('width', 20)
+      .attr('height', 20)
+      .attr('href', 'Art/color_wheel.svg')
+      .on('click', function() { self.color_em(); });
+
+    this.color_scale = function(dummy) { return WOW.default_color; }; //default color function just returns default
+
     this.axes.append('g').attr("transform", "translate(0,"+(self.top+self.h)+")").attr('id', 'x_axis_graph_'+String(self.graph_num));
     this.axes.append('g').attr("transform", "translate("+self.left+", 0)").attr('id', 'y_axis_graph_'+String(self.graph_num));
+  }
+
+  color_em() {
+    let self = this;
+    if (this.has_color) this.legend_stuff.remove();
+    this.color_col = this.parent_data.active_column;
+    let tmp_dtype = this.parent_data.dtypes[this.color_col];
+    if ((tmp_dtype != 'Image') && (tmp_dtype != 'Filename')) {
+      this.has_color = true;
+      if (tmp_dtype == 'String') {
+        this.color_scale = d3.scaleOrdinal(self.parent_data.string_sets[self.color_col], WOW.color_wheel);
+      } else if (tmp_dtype == 'Number') {
+        this.color_scale = d3.scaleSequential(self.parent_data.number_domains[self.color_col], d3.interpolateViridis);
+      }
+      this.update_color();
+      this.make_legend();
+    }
+  }
+
+  make_legend() {
+    // this is a bad version of this: https://observablehq.com/@d3/color-legend
+    let self = this;
+    this.legend_stuff = this.graph_stuff.append('g').style('display', 'block');
+
+    this.legend_button = this.graph_stuff.append('text')
+      .attr('class', 'plot_option plot_legend_button')
+      .attr('x', this.left+this.w-5)
+      .attr('y', this.top+40)
+      .attr('width', 20)
+      .attr('height', 20)
+      .attr('text-anchor', 'middle')
+      .html('L')
+      .on('click', function() { WOW.toggle(self.legend_stuff); });
+
+    this.legend_title = this.legend_stuff.append('text')
+      .attr('x', this.left+this.w+20)
+      .attr('y', this.top-16)
+      .attr('font-size', 16)
+      .html('Legend: ' + String(self.color_col));
+
+    if (self.parent_data.dtypes[self.color_col] == 'String') {
+      this.legend_entries = this.legend_stuff.append('g');
+      this.legend_entries.selectAll('.legend_el_text')
+        .data(self.parent_data.string_sets[self.color_col])
+        .enter()
+        .append('text')
+          .attr('class', 'legend_el_text')
+          .attr('x', this.left+this.w+45)
+          .attr('y', function(d, i) { return self.top+3+18*i;})
+          .attr('font-size', 14)
+          .attr('dominant-baseline', 'middle')
+          .html(function(d) { return d; });
+
+      this.legend_entries.selectAll('.legend_el_marker')
+        .data(self.parent_data.string_sets[self.color_col])
+        .enter()
+        .append('circle')
+          .attr('class', 'legend_el_marker')
+          .attr('cx', this.left+this.w+30)
+          .attr('cy', function(d, i) { return self.top+3+18*i;})
+          .attr('r', 7)
+          .attr('fill', function(d) { return self.color_scale(d); });
+    } else if (self.parent_data.dtypes[self.color_col] == 'Number') {
+      // 10 blocks always ten blocks I tell you 
+      let the_domain = self.color_scale.domain();
+      let domain_range = the_domain[1]-the_domain[0];
+      let bar_data = [];
+      let n = self.h-40;
+      for (let i=0; i<n; i++) {
+        bar_data.push({
+          'val': the_domain[0]+i*domain_range/n,
+          'color': self.color_scale(the_domain[0]+i*domain_range/n),
+      })
+      }
+      this.legend_bar = this.legend_stuff.append("g");
+      this.legend_bar.selectAll("rect")
+        .data(bar_data)
+        .join("rect") // need to learn join syntax: https://observablehq.com/@d3/selection-join
+          .attr("y", (d, i) => self.top+self.h-20-(i+1))
+          .attr("x", self.left+self.w+30)
+          .attr("height", 1)
+          .attr("width", 20)
+          .attr("fill", d => d['color']);
+      this.legend_scale = d3.scaleLinear().domain(self.color_scale.domain()).range([self.top+20, self.top+self.h-20]);
+      this.legend_axis_el = this.legend_stuff.append('g').attr("transform", "translate("+String(self.left+self.w+50)+", 0)").attr('class', 'legend_axis')
+      this.legend_axis_el.call(d3.axisRight().scale(self.legend_scale));
+    }
+
   }
 
   label_x() {
@@ -260,6 +375,12 @@ class WowMarkerPlot extends WowGraph {
     }
   }
 
+  update_color() {
+    let self = this;
+    this.parent_data.svg.selectAll('.mark_on_graph_'+String(self.graph_num))
+      .attr('fill', function(d) { return self.color_scale(d[self.color_col]) || WOW.default_color});
+  }
+
   update_plot() {
     let self = this;
     var xvar = self.x;
@@ -307,7 +428,7 @@ class WowMarkerPlot extends WowGraph {
         .append('circle')
         .attr('class', 'circle_point mark_on_graph_'+String(WOW.graph_counter))
         .attr('r', self.point_size)
-        .attr('fill', WOW.default_color)
+        .attr('fill', function(d) { return self.color_scale(d[self.color_col]) || WOW.default_color})
         .attr('cx', function(d) { return self.xScale(d[xvar]); })
         .attr('cy', function(d) { return self.yScale(d[yvar]); });
     }
@@ -339,6 +460,12 @@ class WowSeriesPlot extends WowGraph {
     if (tmp_dtype.indexOf("Series")>-1) super.label_y();
   }
 
+  update_color() {
+    let self = this;
+    this.parent_data.svg.selectAll('.mark_on_graph_'+String(self.graph_num))
+      .attr('stroke', function(d) { return self.color_scale(d[self.color_col]) || WOW.default_color});
+  }
+
   update_plot() {
     let self = this;
     this.line = d3.line();
@@ -362,7 +489,6 @@ class WowSeriesPlot extends WowGraph {
         this.line.x(function(d) { return self.xScale(Number(d.x)); });
       } else if (this.x_dtype == 'Series_String') {
         let xd = this.parent_data.string_sets[this.x];
-        console.log(xd);
         this.xScale = this.make_scale(xd, 'x', 'Qual');
         this.line.x(function(d) { return self.xScale(d.x); });
       }
@@ -392,7 +518,7 @@ class WowSeriesPlot extends WowGraph {
         .append('path')
         .attr('class', 'path_mark mark_on_graph_'+String(WOW.graph_counter))
         .attr('stroke-width', self.line_weight)
-        .attr('stroke', WOW.default_color)
+        .attr('stroke', function(d) { return self.color_scale(d[self.color_col]) || WOW.default_color})
         .attr('fill', 'none')
         .attr('d', function(d) { 
           let yvals = d[self.y].split(';');
@@ -434,8 +560,7 @@ class WowData {
     this.parent_column_div = parent_column_div;
     this.f_in = f_in;
     this.wow_children = [];
-    this.graphs = [];
-    this.not_graphs = [];
+    this.vis_elements = [];
     let wow_data = this;
     console.log(f_in);
     let reader = new FileReader();
@@ -472,6 +597,7 @@ class WowData {
             let already_clicked = d3.select(this).classed('clicked_data');
             wow_data.svg.selectAll('.'+wow_data.wow_data_class).classed('clicked_data', false);
             if (!already_clicked) d3.select(this).classed('clicked_data', true);
+            console.log(this);
           });
 
 
@@ -626,7 +752,6 @@ class WowData {
   startRect(event) {
     //Add a rectangle
     // 1. Get mouse location in SVG
-    console.log(this);
     this.current_rect = {};
     this.current_rect.x0 = event.x;
     this.current_rect.y0 = event.y;
@@ -664,13 +789,13 @@ class WowData {
     if (dimensions[2]*dimensions[3] > 500) { // if we drew anything reasonable
       this.Rects.push({ ...this.current_rect });
       if (this.rect_class == 'bounding_rect_text') {
-        this.not_graphs.push(new WowText(dimensions, this, this.Rects[this.Rects.length-1]));
+        this.vis_elements.push(new WowText(dimensions, this, this.Rects[this.Rects.length-1]));
       } else if (this.rect_class == 'bounding_rect_img') {
-        this.graphs.push(new WowImg(dimensions, this, this.Rects[this.Rects.length-1]));
+        this.vis_elements.push(new WowImg(dimensions, this, this.Rects[this.Rects.length-1]));
       } else if (this.rect_class == 'bounding_rect_markerplot') {
-        this.graphs.push(new WowMarkerPlot(dimensions, this, this.Rects[this.Rects.length-1]));
+        this.vis_elements.push(new WowMarkerPlot(dimensions, this, this.Rects[this.Rects.length-1]));
       } else if (this.rect_class == 'bounding_rect_seriesplot') {
-        this.graphs.push(new WowSeriesPlot(dimensions, this, this.Rects[this.Rects.length-1]));
+        this.vis_elements.push(new WowSeriesPlot(dimensions, this, this.Rects[this.Rects.length-1]));
       }
     } else {
       this.current_rect.r.remove();
@@ -822,7 +947,6 @@ WOW.toggle_columns = function(arrow) {
 
 WOW.toggle_sidebar = function() {
   let current_state = (d3.select("#WOW_sidebar_closer").html()=='&lt;') ? 'open': 'closed';
-  console.log(d3.select("#WOW_sidebar_closer").html(), current_state);
   if (current_state == 'open') {
     d3.select("#WOW_sidebar")
       .transition()
@@ -837,8 +961,13 @@ WOW.toggle_sidebar = function() {
       .style("width", "200px")
       .style("overflow-x", "scroll")
       .on("end", d3.select("#WOW_sidebar_closer").html('&lt;'))
+  } 
+}
+
+WOW.clear_plots = function () {
+  for (let g of WOW.top_data.vis_elements) {
+    g.kill();
   }
-  
 }
 
 WOW.file_reader = function() {
